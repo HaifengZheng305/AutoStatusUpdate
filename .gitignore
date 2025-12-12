@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environment
+venv/
+env/
+.ai_env/
+.ai-env/
+.ai_env/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# FastAPI / Uvicorn
+*.log
+
+# Environment variables
+.env
+.env.*
