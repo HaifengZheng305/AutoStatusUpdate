@@ -13,7 +13,7 @@ def main():
     maherLogin = os.getenv("maherLogin")
     maherPW = os.getenv("maherPW")
     scraper = MaherScraper(driver, username=maherLogin, password=maherPW)
-    scraper.script_login()
+    scraper.scrape()
 
 if __name__ == "__main__":
     main()

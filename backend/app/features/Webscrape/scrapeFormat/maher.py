@@ -1,5 +1,6 @@
 from .baseModel import BaseTerminalScraper
 from selenium.common.exceptions import TimeoutException
+from typing import Dict, Type, Optional, Literal, List
 import time
 
 class MaherScraper(BaseTerminalScraper):
@@ -25,7 +26,7 @@ class MaherScraper(BaseTerminalScraper):
             # dump HTML so you can see what Selenium sees
 
     
-    def enterContainer(self):
+    def importAvailability(self):
         try:
             self.wait_xpath('//*[@id="noPrint"]')
             print("new page loaded")
@@ -85,11 +86,33 @@ class MaherScraper(BaseTerminalScraper):
 
     def scrape_container_status(self, container_id: str) -> dict:
         self.get("https://mahercsp.maherterminals.com/CSP/")
+
+    def enterContainer(self, containers: Optional[List] = None):
+        if containers is None:
+            return ""  # or handle the empty case as needed
+        string = ""
+        for container in containers:
+            string += container + "\n"
+        
+        print(string)
+
+        self.type_xpath('//*[@id="mat-input-2"]', string)
+        
+        print("typed")
+
+        self.click_xpath("//button[.//span[text()='Search']]")
+
+
+        
+        
     
-    def script_login(self):
+    def scrape(self):
         try:
             self.login()
-            self.enterContainer()
+            self.importAvailability()
+            container = ['OOLU0928542', 'oocu908502']
+            self.enterContainer(container)
+
             time.sleep(10)
         finally:
             self.driver.quit()
