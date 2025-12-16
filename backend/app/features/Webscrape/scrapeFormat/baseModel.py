@@ -11,9 +11,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import (
     TimeoutException,
     StaleElementReferenceException,
+    ElementClickInterceptedException,
+    NoSuchElementException
 )
 import time
-
 
 
 TerminalName = Literal["MAHER", "APM", "PNCT"]
@@ -70,6 +71,69 @@ class BaseTerminalScraper(ABC):
 
     def get(self, url):
         self.driver.get(url)
+
+    def ensure_expanded_xpath(self, header_xpath, inner_xpath, timeout=10):
+        """
+        Ensure an expandable section (accordion/panel/expander) is expanded.
+        All locators are XPATH strings.
+        - header_xpath: xpath to the clickable header/toggle
+        - inner_xpath: xpath to an element that exists only when expanded (e.g. a button inside)
+        Returns the located inner element (WebElement) when visible/clickable.
+        Raises TimeoutException on failure.
+        """
+        wait = WebDriverWait(self.driver, timeout)
+
+        # 1) quick check: if inner element is already visible -> return it
+        try:
+            print("step 1")
+            return wait.until(EC.visibility_of_element_located((By.XPATH, inner_xpath)))
+        except TimeoutException:
+            pass  # not visible yet
+
+        # 2) find header (may be stale so handle exceptions)
+        try:
+            print("step 2")
+            header = self.driver.find_element(By.XPATH, header_xpath)
+        except NoSuchElementException:
+            raise NoSuchElementException(f"Header not found for xpath: {header_xpath}")
+
+        # 3) try to infer expanded state from attributes or class (common patterns)
+        try:
+            print("step 3")
+            aria = header.get_attribute("aria-expanded")
+            cls = header.get_attribute("class") or ""
+            # if header reports expanded or has typical 'expanded' class, wait for inner content
+            if (aria and aria.lower() == "true") or ("expanded" in cls) or ("mat-expanded" in cls):
+                return wait.until(EC.visibility_of_element_located((By.XPATH, inner_xpath)))
+        except StaleElementReferenceException:
+            # header went stale, we'll refetch and click below
+            pass
+
+        # 4) Not expanded — try clicking the header to expand.
+        try:
+            print("step 4")
+            try:
+            
+                header.click()
+            except (ElementClickInterceptedException, StaleElementReferenceException):
+                # refetch header and try JS click fallback
+                header = self.driver.find_element(By.XPATH, header_xpath)
+                self.driver.execute_script("arguments[0].click();", header)
+
+            # 5) wait for the inner element to be visible
+            print("step 5")
+            return wait.until(EC.visibility_of_element_located((By.XPATH, inner_xpath)))
+
+        except TimeoutException:
+            # If waiting failed, try one last strategy: scroll header into view and retry click
+            try:
+                self.driver.execute_script("arguments[0].scrollIntoView(true);", header)
+                self.driver.execute_script("arguments[0].click();", header)
+                return wait.until(EC.visibility_of_element_located((By.XPATH, inner_xpath)))
+            except Exception as e:
+                raise TimeoutException(
+                    f"Failed to expand panel. header_xpath={header_xpath}, inner_xpath={inner_xpath}. Last error: {e}"
+                )
     @abstractmethod
     def scrape_container_status(self, container_id: str) -> dict:
         """

@@ -2,10 +2,17 @@ from scrapeFormat.maher import MaherScraper
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
 
 def main():
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
-    scraper = MaherScraper(driver, username="ANDYZ", password="andy@123")
+    maherLogin = os.getenv("maherLogin")
+    maherPW = os.getenv("maherPW")
+    scraper = MaherScraper(driver, username=maherLogin, password=maherPW)
     scraper.script_login()
 
 if __name__ == "__main__":
