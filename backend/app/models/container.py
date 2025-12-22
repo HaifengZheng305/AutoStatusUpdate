@@ -1,5 +1,8 @@
 from pydantic import BaseModel
 from datetime import datetime
+from typing import Literal
+
+TerminalName = Literal["MAHER", "APM", "PNCT"]
 
 class Container(BaseModel):
     LFD: datetime                     # Last Free Day (date)
