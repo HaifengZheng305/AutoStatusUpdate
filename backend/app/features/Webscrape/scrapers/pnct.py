@@ -36,8 +36,6 @@ class PNCTScraper(BaseTerminalScraper):
         )
 
         self.type_xpath(input_xpath, string)
-        
-        print("typed")
 
         self.click_xpath('//*[@id="btnTosInquiry"]')
 
