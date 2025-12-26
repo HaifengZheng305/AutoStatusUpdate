@@ -75,6 +75,11 @@ class BaseTerminalScraper(ABC):
                 (By.XPATH, xpath)
             )
         )
+    
+    def wait_CSS(self, css:str):
+        self.wait.until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, css))
+        )
 
     def get(self, url):
         self.driver.get(url)

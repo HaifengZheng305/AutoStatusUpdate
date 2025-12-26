@@ -1,5 +1,6 @@
 from .baseModel import BaseTerminalScraper
 from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.common.by import By
 from typing import Dict, Type, Optional, Literal, List
 import time
 
@@ -56,11 +57,10 @@ class MaherScraper(BaseTerminalScraper):
             print("container Availability Clicked ensured expanded")
 
             self.click_xpath( 
-                '//*[@id="cdk-accordion-child-2"]/div/span[1]/mat-card'
+                '//*[@id="cdk-accordion-child-2"]/div/span[2]/mat-card'
             )
 
             print("clicked Import Availability")
-
 
         #     # 3. Now click the “Import Availability” item under Equipment
         #     # import_avail_xpath = (
@@ -102,6 +102,54 @@ class MaherScraper(BaseTerminalScraper):
 
         self.click_xpath("//button[.//span[text()='Search']]")
 
+    def extract_containers(self):
+        self.wait_CSS( "mat-row.mat-row")
+
+    # Wait until table rows are rendered
+
+        rows = self.driver.find_elements(By.CSS_SELECTOR, "mat-row.mat-row")
+
+        containers = []
+
+        for row in rows:
+            def safe_text(selector):
+                try:
+                    el = row.find_element(By.CSS_SELECTOR, selector)
+                    txt = el.text.strip()
+                    return txt if txt else None
+                except:
+                    return None
+
+            container_id = safe_text(".mat-column-container")
+
+            # Available column (greenColor = Yes, redColor/empty = No)
+            available_text = safe_text(".greenColor")
+            available = True if available_text == "Yes" else False
+
+            customs_release = safe_text(".mat-column-customs_released_description")
+
+            freight_release_text = safe_text(".mat-column-freight_released_fmt")
+            freight_release = (
+                True if freight_release_text == "Yes"
+                else False if freight_release_text is not None
+                else None
+            )
+
+            last_free_day = safe_text(".mat-column-fte_date_fmt")
+
+            # Skip empty / invalid rows
+            if not container_id:
+                continue
+
+            containers.append({
+                "container": container_id,
+                "available": available,
+                "customs_release": customs_release,
+                "freight_release": freight_release,
+                "last_free_day": last_free_day
+            })
+
+        return containers
 
         
         
@@ -110,9 +158,10 @@ class MaherScraper(BaseTerminalScraper):
         try:
             self.login()
             self.importAvailability()
-            container = ['OOLU0928542', 'oocu908502']
+            container = ['OOLU0192235', 'OOLU0701076', 'SEGU1924857', 'SEGU2028705', 'TEMU0517730']
             self.enterContainer(container)
-
-            time.sleep(10)
+            result = self.extract_containers()
+            print(result)
+            time.sleep(15)
         finally:
             self.driver.quit()
