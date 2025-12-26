@@ -7,7 +7,7 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.common.exceptions import (
     TimeoutException,
     StaleElementReferenceException,
@@ -63,9 +63,15 @@ class BaseTerminalScraper(ABC):
         return el
     
     def type_xpath(self, xpath, text):
-        el = self.wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
+        el = self.wait.until( EC.presence_of_element_located((By.XPATH, xpath))
+        )
+
+        # Ensure element is in view
+        self.driver.execute_script(
+            "arguments[0].scrollIntoView({block:'center'});", el
+        )
+
         el.clear()
-        el.click()
         el.send_keys(text)
         return el
 
@@ -83,6 +89,22 @@ class BaseTerminalScraper(ABC):
 
     def get(self, url):
         self.driver.get(url)
+
+    def select_xpath(self, selectID, selectValue):
+        select_el = self.wait.until(
+            EC.presence_of_element_located((By.ID, selectID))
+        )
+
+        # Set value + notify MDB / Angular
+        self.driver.execute_script(
+            """
+            arguments[0].value = arguments[1];
+            arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
+            arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
+            """,
+            select_el,
+            selectValue
+        )
 
     def ensure_expanded_xpath(self, header_xpath, inner_xpath, timeout=10):
         """

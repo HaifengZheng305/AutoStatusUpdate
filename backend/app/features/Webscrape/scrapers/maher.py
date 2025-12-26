@@ -154,7 +154,7 @@ class MaherScraper(BaseTerminalScraper):
         
         
     
-    def scrape(self):
+    def scrape_container_status(self):
         try:
             self.login()
             self.importAvailability()

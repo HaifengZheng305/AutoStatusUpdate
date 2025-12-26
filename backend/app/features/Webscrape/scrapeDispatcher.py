@@ -1,4 +1,5 @@
 from scrapers.maher import MaherScraper
+from scrapers.pnct import PNCTScraper
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
@@ -31,10 +32,12 @@ load_dotenv()
 
 def main():
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
-    maherLogin = os.getenv("maherLogin")
-    maherPW = os.getenv("maherPW")
-    scraper = MaherScraper(driver, username=maherLogin, password=maherPW)
-    scraper.scrape()
+    scraper = PNCTScraper(driver)
+    scraper.scrape_container_status()
+    # maherLogin = os.getenv("maherLogin")
+    # maherPW = os.getenv("maherPW")
+    # scraper = MaherScraper(driver, username=maherLogin, password=maherPW)
+    # scraper.scrape_container_status()
 
 if __name__ == "__main__":
     main()
