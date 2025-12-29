@@ -2,6 +2,7 @@ from .baseModel import BaseTerminalScraper
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from typing import Dict, Type, Optional, Literal, List
+from app.models.container import Container, TerminalName
 import time
 
 class PNCTScraper(BaseTerminalScraper):
@@ -39,14 +40,43 @@ class PNCTScraper(BaseTerminalScraper):
 
         self.click_xpath('//*[@id="btnTosInquiry"]')
 
+    def extract_containers(self):
+        self.wait_xpath("//tbody/tr[contains(@class,'ng-scope')]")
+
+        rows = self.driver.find_elements(
+            By.XPATH, "//tbody/tr[contains(@class,'ng-scope')]"
+        )
+
+        results = []
+
+        for row in rows:
+            cols = row.find_elements(By.TAG_NAME, "td")
+
+            def text_or_none(idx):
+                txt = cols[idx].text.strip()
+                return txt if txt else None
+
+            container = Container(
+                container_number=text_or_none(0),
+                available=BaseTerminalScraper.parse_available(text_or_none(1)),
+                customs_release=BaseTerminalScraper.parse_bool(text_or_none(4)),
+                freight_release=BaseTerminalScraper.parse_bool(text_or_none(5)),
+                last_free_day=BaseTerminalScraper.parse_date(text_or_none(8)),
+                terminal= TerminalName.PNCT
+            )
+
+            results.append(container)
+
+        return results
+
+
 
     
     def scrape_container_status(self):
-        try:
-            self.open_page()
-            self.importAvailability()
-            container = ['GAOU6438551']
-            self.enterContainer(container)
-            time.sleep(15)
-        finally:
-            self.driver.quit()
+        print("PNCT")
+        self.open_page()
+        self.importAvailability()
+        container = ['GAOU6438551', 'JXLU4472598', 'TLLU5203901', 'MSMU8333318']
+        self.enterContainer(container)
+        result = self.extract_containers()
+        print(result)

@@ -1,11 +1,32 @@
-from pydantic import BaseModel
-from datetime import datetime
-from typing import Literal
+from pydantic import BaseModel, Field
+from datetime import datetime, date
+from typing import Literal, Optional
+from enum import Enum
 
-TerminalName = Literal["MAHER", "APM", "PNCT"]
+class TerminalName(str, Enum):
+    MAHER = "MAHER"
+    APM = "APM"
+    PNCT = "PNCT"
 
 class Container(BaseModel):
-    LFD: datetime                     # Last Free Day (date)
-    container_number: str         # Text
-    customer_release: bool        # Boolean
-    freight_release: bool         # Boolean
+    container_number: str
+
+    available: bool = Field(
+        description="True if container is available"
+    )
+
+    customs_release: bool = Field(
+        description="True if customs status is RELEASED"
+    )
+
+    freight_release: bool = Field(
+        description="True if freight status is RELEASED"
+    )
+
+    last_free_day: Optional[date] = Field(
+        description="Last free day (may be null)"
+    )     # Boolean
+
+    terminal: TerminalName = Field(
+        description="Terminal where container is located"
+    )

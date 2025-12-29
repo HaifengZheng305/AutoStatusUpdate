@@ -1,6 +1,7 @@
 from .baseModel import BaseTerminalScraper
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
+from app.models.container import Container, TerminalName
 from typing import Dict, Type, Optional, Literal, List
 import time
 
@@ -109,7 +110,7 @@ class MaherScraper(BaseTerminalScraper):
 
         rows = self.driver.find_elements(By.CSS_SELECTOR, "mat-row.mat-row")
 
-        containers = []
+        result = []
 
         for row in rows:
             def safe_text(selector):
@@ -141,27 +142,29 @@ class MaherScraper(BaseTerminalScraper):
             if not container_id:
                 continue
 
-            containers.append({
-                "container": container_id,
-                "available": available,
-                "customs_release": customs_release,
-                "freight_release": freight_release,
-                "last_free_day": last_free_day
-            })
+            container = Container(
+                container_number=container_id,
+                available=BaseTerminalScraper.parse_available(available),
+                customs_release=BaseTerminalScraper.parse_bool(customs_release),
+                freight_release=BaseTerminalScraper.parse_bool(freight_release),
+                last_free_day=BaseTerminalScraper.parse_date(last_free_day),
+                terminal= TerminalName.MAHER
+            )
 
-        return containers
+            result.append(container)
+
+
+        return result
 
         
         
     
     def scrape_container_status(self):
-        try:
-            self.login()
-            self.importAvailability()
-            container = ['OOLU0192235', 'OOLU0701076', 'SEGU1924857', 'SEGU2028705', 'TEMU0517730']
-            self.enterContainer(container)
-            result = self.extract_containers()
-            print(result)
-            time.sleep(15)
-        finally:
-            self.driver.quit()
+        print("maher")
+        self.login()
+        self.importAvailability()
+        container = ['OOLU0192235', 'OOLU0701076', 'SEGU1924857', 'SEGU2028705', 'TEMU0517730']
+        self.enterContainer(container)
+        result = self.extract_containers()
+        print(result)
+

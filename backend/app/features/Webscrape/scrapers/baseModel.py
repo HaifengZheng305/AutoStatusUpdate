@@ -1,6 +1,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Dict, Type, Optional, Literal, List
+from datetime import datetime, date
 
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -118,21 +119,18 @@ class BaseTerminalScraper(ABC):
 
         # 1) quick check: if inner element is already visible -> return it
         try:
-            print("step 1")
             return wait.until(EC.visibility_of_element_located((By.XPATH, inner_xpath)))
         except TimeoutException:
             pass  # not visible yet
 
         # 2) find header (may be stale so handle exceptions)
         try:
-            print("step 2")
             header = self.driver.find_element(By.XPATH, header_xpath)
         except NoSuchElementException:
             raise NoSuchElementException(f"Header not found for xpath: {header_xpath}")
 
         # 3) try to infer expanded state from attributes or class (common patterns)
         try:
-            print("step 3")
             aria = header.get_attribute("aria-expanded")
             cls = header.get_attribute("class") or ""
             # if header reports expanded or has typical 'expanded' class, wait for inner content
@@ -144,7 +142,6 @@ class BaseTerminalScraper(ABC):
 
         # 4) Not expanded — try clicking the header to expand.
         try:
-            print("step 4")
             try:
             
                 header.click()
@@ -154,7 +151,6 @@ class BaseTerminalScraper(ABC):
                 self.driver.execute_script("arguments[0].click();", header)
 
             # 5) wait for the inner element to be visible
-            print("step 5")
             return wait.until(EC.visibility_of_element_located((By.XPATH, inner_xpath)))
 
         except TimeoutException:
@@ -167,6 +163,36 @@ class BaseTerminalScraper(ABC):
                 raise TimeoutException(
                     f"Failed to expand panel. header_xpath={header_xpath}, inner_xpath={inner_xpath}. Last error: {e}"
                 )
+    @staticmethod
+    def parse_bool(value: str | None) -> bool:
+        return value == "RELEASED"
+
+
+    def parse_available(value: str | None) -> bool:
+        return value == "Yes"
+
+    def parse_date(value: Optional[str]) -> Optional[date]:
+        if not value:
+            return None
+
+        value = value.strip()
+
+        formats = [
+            "%m/%d/%Y",      # 12/29/2025 (PNCT)
+            "%Y-%b-%d",      # 2025-Dec-29 (Maher)
+            "%Y-%m-%d",      # fallback ISO
+        ]
+
+        for fmt in formats:
+            try:
+                return datetime.strptime(value, fmt).date()
+            except ValueError:
+                continue
+
+        # If we reach here, log and return None instead of crashing
+        print(f"[WARN] Unrecognized date format: {value}")
+        return None
+
     @abstractmethod
     def scrape_container_status(self, container_id: str) -> dict:
         """

@@ -1,9 +1,10 @@
-from scrapers.maher import MaherScraper
-from scrapers.pnct import PNCTScraper
+from app.features.Webscrape.scrapers.maher import MaherScraper
+from app.features.Webscrape.scrapers.pnct import PNCTScraper
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from dotenv import load_dotenv
+
 # from models import TerminalName
 # from scrapers.baseModel import BaseTerminalScraper, Container
 from typing import Dict, Type
@@ -32,12 +33,28 @@ load_dotenv()
 
 def main():
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
-    scraper = PNCTScraper(driver)
-    scraper.scrape_container_status()
-    # maherLogin = os.getenv("maherLogin")
-    # maherPW = os.getenv("maherPW")
-    # scraper = MaherScraper(driver, username=maherLogin, password=maherPW)
-    # scraper.scrape_container_status()
+
+    try:
+        # Maher
+        maherLogin = os.getenv("maherLogin")
+        maherPW = os.getenv("maherPW")
+
+        if not maherLogin or not maherPW:
+            raise RuntimeError("Maher credentials missing")
+
+        maher = MaherScraper(driver, username=maherLogin, password=maherPW)
+        maher.scrape_container_status()
+
+        # Reset browser state
+        driver.delete_all_cookies()
+
+        # PNCT
+        pnct = PNCTScraper(driver)
+        pnct.scrape_container_status()
+
+
+    finally:
+        driver.quit()
 
 if __name__ == "__main__":
     main()
