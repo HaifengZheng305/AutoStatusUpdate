@@ -166,5 +166,5 @@ class MaherScraper(BaseTerminalScraper):
         container = ['OOLU0192235', 'OOLU0701076', 'SEGU1924857', 'SEGU2028705', 'TEMU0517730']
         self.enterContainer(container)
         result = self.extract_containers()
-        print(result)
+        return result
 

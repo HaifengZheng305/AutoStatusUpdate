@@ -30,3 +30,8 @@ class Container(BaseModel):
     terminal: TerminalName = Field(
         description="Terminal where container is located"
     )
+
+    check: Optional[bool] = Field(
+        default=False,
+        description="Last free day (may be null)"
+    )     # Boolean

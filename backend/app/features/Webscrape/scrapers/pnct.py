@@ -80,3 +80,4 @@ class PNCTScraper(BaseTerminalScraper):
         self.enterContainer(container)
         result = self.extract_containers()
         print(result)
+        return result
