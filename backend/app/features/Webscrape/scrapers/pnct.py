@@ -10,7 +10,7 @@ class PNCTScraper(BaseTerminalScraper):
 
     def __init__(self, driver, containers = None):
         super().__init__(driver)
-        self.contaienr = containers
+        self.containers = containers
     def open_page(self):
         self.get(self.url)
     
@@ -25,7 +25,8 @@ class PNCTScraper(BaseTerminalScraper):
             return ""  # or handle the empty case as needed
         string = ""
         for container in containers:
-            string += container + "\n"
+            string += container.container_number + "\n"
+            print(container.container_number)
         
         print(string)
 
@@ -76,8 +77,7 @@ class PNCTScraper(BaseTerminalScraper):
         print("PNCT")
         self.open_page()
         self.importAvailability()
-        container = ['GAOU6438551', 'JXLU4472598', 'TLLU5203901', 'MSMU8333318']
-        self.enterContainer(container)
+        self.enterContainer(self.containers)
         result = self.extract_containers()
         print(result)
         return result

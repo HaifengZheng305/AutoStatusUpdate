@@ -35,6 +35,16 @@ def add_containers(containers: List[Container]) -> List[str]:
 
 # # ==================== READ OPERATIONS ====================
 
+async def get_unchecked_containers_by_terminal(collection, terminal: str):
+    cursor = collection.find({
+        "terminal": terminal,
+        "$or": [
+            {"check": False},
+            {"check": {"$exists": False}}
+        ]
+    })
+    return [Container(**doc) async for doc in cursor]
+
 # def get_container_by_id(container_id: str) -> Optional[Container]:
 #     """
 #     Retrieve a container by its MongoDB _id.

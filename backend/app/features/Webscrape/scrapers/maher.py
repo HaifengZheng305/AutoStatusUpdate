@@ -12,6 +12,7 @@ class MaherScraper(BaseTerminalScraper):
         super().__init__(driver, containers=containers)
         self.username = username
         self.password = password
+        self.container= containers
 
     def login(self):
         try:
@@ -93,7 +94,8 @@ class MaherScraper(BaseTerminalScraper):
             return ""  # or handle the empty case as needed
         string = ""
         for container in containers:
-            string += container + "\n"
+            string += container.container_number + "\n"
+            print(container.container_number)
         
         print(string)
 
@@ -163,8 +165,8 @@ class MaherScraper(BaseTerminalScraper):
         print("maher")
         self.login()
         self.importAvailability()
-        container = ['OOLU0192235', 'OOLU0701076', 'SEGU1924857', 'SEGU2028705', 'TEMU0517730']
-        self.enterContainer(container)
+        self.enterContainer(self.container)
         result = self.extract_containers()
+        print(result)
         return result
 
