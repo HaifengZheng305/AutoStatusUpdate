@@ -1,34 +1,32 @@
 import os
 import asyncio
+from typing import List
 
 from dotenv import load_dotenv
 
-from pymongo.synchronous import collection
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
 from app.features.Webscrape.scrapers.maher import MaherScraper
 from app.features.Webscrape.scrapers.pnct import PNCTScraper
-
-from app.repositories.container_repo import update_container_by_number, get_unchecked_containers_by_terminal
-from app.db.mongo import get_container_collection, get_db_client
+from app.models.container import Container, TerminalName
 
 
 class ScraperRunner:
-    def __init__(self):
+    def __init__(self, containers: List[Container] = None):
+        load_dotenv()
         self.driver = webdriver.Chrome(
             service=Service(ChromeDriverManager().install())
         )
-
-        self.client = get_db_client()
-        self.containers_collection = get_container_collection(self.client)
+        self.containers = containers or []
 
     async def run_maher(self):
-        maher_containers = await get_unchecked_containers_by_terminal(
-            self.containers_collection,
-            "MAHER"
-        )
+        maher_containers = [c for c in self.containers if c.terminal == TerminalName.MAHER]
+        
+        if not maher_containers:
+            return []
+
         maher_login = os.getenv("maherLogin")
         maher_pw = os.getenv("maherPW")
 
@@ -39,124 +37,53 @@ class ScraperRunner:
             self.driver,
             username=maher_login,
             password=maher_pw,
-            containers = maher_containers
+            containers=maher_containers
         )
 
-        containers = maher.scrape_container_status()
+        scraped_containers = maher.scrape_container_status()
 
-        for container in containers:
+        for container in scraped_containers:
             container.check = (
                 container.available is True and
                 container.customs_release is True and
                 container.freight_release is True and
                 container.last_free_day is not None
             )
-            result = await update_container_by_number(
-                container_number=container.container_number,
-                container=container,
-                collection=self.containers_collection
-            )
 
-            if not result:
-                print(f"Container not found: {container.container_number}")
-
+        return scraped_containers
 
     async def run_pnct(self):
-        pnct_containers = await get_unchecked_containers_by_terminal(
-            self.containers_collection,
-            "PNCT"
-        )
+        pnct_containers = [c for c in self.containers if c.terminal == TerminalName.PNCT]
+        
+        if not pnct_containers:
+            return []
+
         pnct = PNCTScraper(self.driver, pnct_containers)
-        containers = pnct.scrape_container_status()
-        for container in containers:
+        scraped_containers = pnct.scrape_container_status()
+        
+        for container in scraped_containers:
             container.check = (
                 container.available is True and
                 container.customs_release is True and
                 container.freight_release is True and
                 container.last_free_day is not None
             )
-            result = await update_container_by_number(
-                container_number=container.container_number,
-                container=container,
-                collection=self.containers_collection
-            )
 
-            if not result:
-                print(f"Container not found: {container.container_number}")
+        return scraped_containers
 
-
-    async def run(self):
+    async def run(self) -> List[Container]:
         try:
-            await self.run_maher()
-            await self.run_pnct()
+            results: List[Container] = []
+
+            if any(c.terminal == TerminalName.MAHER for c in self.containers):
+                results.extend(await self.run_maher())
+
+            if any(c.terminal == TerminalName.PNCT for c in self.containers):
+                results.extend(await self.run_pnct())
+
+            return results
         finally:
             self.driver.quit()
-
-# # class ScraperDispatcher:
-
-# #     _registry: Dict[TerminalName, Type[BaseTerminalScraper]] = {
-# #         "MAHER": MaherScraper,
-# #         ##"APM": APMScraper,
-# #         ##"PNCT": PNCTScraper,
-# #     }
-
-# #     @classmethod
-# #     def run(cls, container: Container) -> dict:
-# #         scraper_cls = cls._registry.get(container.terminal)
-
-# #         if not scraper_cls:
-# #             raise ValueError(f"No scraper registered for terminal {container.terminal}")
-
-# #         scraper = scraper_cls()
-# #         return scraper.scrape(container)
-
-
-# async def main():
-#     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
-#     client = get_db_client()
-#     containers_collection = get_container_collection(client)
-
-#     try:
-#         # Maher
-#         maherLogin = os.getenv("maherLogin")
-#         maherPW = os.getenv("maherPW")
-
-#         if not maherLogin or not maherPW:
-#             raise RuntimeError("Maher credentials missing")
-
-#         maher = MaherScraper(driver, username=maherLogin, password=maherPW)
-#         maherContainer = maher.scrape_container_status()
-
-#         for container in maherContainer:
-#             result = await update_container_by_number(
-#                 container_number=container.container_number,
-#                 container=container,
-#                 collection=containers_collection
-#             )
-
-#             if not result:
-#                 print(f"Container not found: {container.container_number}")
-
-
-#         # Reset browser state
-#         driver.delete_all_cookies()
-
-#         # PNCT
-#         pnct = PNCTScraper(driver)
-#         pnctContainer = pnct.scrape_container_status()
-
-#         for container in pnctContainer:
-#             result = await update_container_by_number(
-#                 container_number=container.container_number,
-#                 container=container,
-#                 collection=containers_collection
-#             )
-
-#             if not result:
-#                 print(f"Container not found: {container.container_number}")
-
-#     finally:
-#         driver.quit()
 
 if __name__ == "__main__":
     load_dotenv()
